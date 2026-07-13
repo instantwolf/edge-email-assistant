@@ -1,0 +1,113 @@
+{
+  "label": "IOT26-DEMO",
+  "event_prefix": "[IOT26-DEMO]",
+  "note": "Partial, manually triggered demo seeds. Each scenario is a small self-contained set that showcases one capability. Seed one, demo it, clean it, then seed the next. Isolated from the eval's IOT26-SEED label. Drive with seed/demo.py (run `list` for the catalog).",
+  "scenarios": [
+    {
+      "id": "triage",
+      "title": "Inbox triage - summarize today's emails",
+      "shows": "F1 summarization: one line per email; separates signal (a meeting, a deadline) from noise (newsletter, promo).",
+      "prompts": ["Summarize today's emails."],
+      "expect": "One line per email (sender, subject, gist); highlights Anna's meeting request and Steiner's Friday deadline; dismisses the newsletter and the promo.",
+      "emails": [
+        {"from": "Anna Mayer <anna.mayer@edu-klu.example>", "subject": "Project sync on Tuesday?", "age_hours": 2, "unread": true,
+         "body": "Hi,\n\ncould we meet for a project sync on Tuesday at 14:00? Room S.2.42 or online.\n\nBest,\nAnna"},
+        {"from": "Prof. Steiner <steiner@edu-klu.example>", "subject": "Report deadline: Friday 15:00", "age_hours": 3, "unread": true,
+         "body": "Dear all,\n\nreminder that the intermediate report is due this Friday at 15:00 sharp. Course portal only.\n\nRegards,\nProf. Steiner"},
+        {"from": "Cloud Weekly <newsletter@cloudweekly.example>", "subject": "Cloud Weekly #218: Serverless GPUs are here", "age_hours": 4, "unread": true,
+         "body": "This week: serverless GPU inference, WASM in the cloud, and 5 Kubernetes cost pitfalls.\n\nUnsubscribe anytime."},
+        {"from": "MegaDeals <promo@megadeals.example>", "subject": "48h FLASH SALE - up to 70% off!!!", "age_hours": 5, "unread": true,
+         "body": "Don't miss out! Everything must go. Click now!"}
+      ],
+      "events": []
+    },
+    {
+      "id": "deadlines",
+      "title": "Deadline capture - extract deadlines into tasks",
+      "shows": "F3 extraction + Google Tasks: the due TIME goes into the task title (Tasks stores date only).",
+      "prompts": ["Find the deadlines in my recent emails and save each one as a task."],
+      "expect": "Creates tasks with the time embedded in the title, e.g. 'Submit intermediate report (due 15:00)', 'Pay invoice #4711 (due 15 July)', 'Send status update (due 12:00 tomorrow)'.",
+      "emails": [
+        {"from": "Prof. Steiner <steiner@edu-klu.example>", "subject": "Report deadline: Friday 15:00", "age_hours": 3, "unread": true,
+         "body": "Reminder: the intermediate report is due this Friday at 15:00 sharp."},
+        {"from": "Billing <invoice@hosting-service.example>", "subject": "Invoice #4711 due July 15", "age_hours": 5, "unread": true,
+         "body": "Your invoice #4711 over EUR 12.90 is due on July 15. Please keep your payment method up to date."},
+        {"from": "Sabine Koch <sabine.koch@topinform.example>", "subject": "Status update by tomorrow noon please", "age_hours": 6, "unread": true,
+         "body": "Hi,\n\nplease send me a short status update on the IoT project by tomorrow 12:00 - three bullet points are fine.\n\nThanks,\nSabine"},
+        {"from": "CFP Bot <cfp@cloudconf.example>", "subject": "CloudConf 2026 CFP closes July 20", "age_hours": 8, "unread": false,
+         "body": "The call for papers for CloudConf 2026 closes on July 20 at 23:59 AoE."}
+      ],
+      "events": []
+    },
+    {
+      "id": "schedule",
+      "title": "Schedule a meeting (direct request)",
+      "shows": "F4 create_event with correct relative-date resolution ('this Friday').",
+      "prompts": ["Schedule a meeting titled 'IoT project sync' this Friday from 10:00 to 10:30."],
+      "expect": "Creates a calendar event on the correct upcoming Friday, 10:00-10:30, without clashing with the existing standup.",
+      "emails": [],
+      "events": [
+        {"title": "Daily standup", "day_offset": 1, "start": "09:00", "end": "09:15",
+         "description": "Existing standup, for calendar context."}
+      ]
+    },
+    {
+      "id": "reply",
+      "title": "Reply in context",
+      "shows": "F2 reply: recipient taken from the email being answered (a .example address - the reply safely bounces).",
+      "prompts": ["Reply to Anna's email and tell her Tuesday at 14:00 works for me."],
+      "expect": "Sends a reply to anna.mayer@edu-klu.example confirming Tuesday 14:00, announcing the send in one sentence first.",
+      "emails": [
+        {"from": "Anna Mayer <anna.mayer@edu-klu.example>", "subject": "Project sync on Tuesday?", "age_hours": 2, "unread": true,
+         "body": "Hi,\n\ncould we meet for a project sync on Tuesday at 14:00? Room S.2.42 or online, whatever suits you.\n\nBest,\nAnna"}
+      ],
+      "events": []
+    },
+    {
+      "id": "agenda",
+      "title": "Agenda / reminders",
+      "shows": "F5 list_events: reads the calendar and reports the upcoming schedule.",
+      "prompts": ["What's on my calendar for the next few days?"],
+      "expect": "Lists the three seeded events with the correct day and time for each.",
+      "emails": [],
+      "events": [
+        {"title": "Daily standup", "day_offset": 1, "start": "09:00", "end": "09:15", "description": "Project group standup."},
+        {"title": "Project sync with Anna", "day_offset": 2, "start": "13:00", "end": "14:00", "description": "Existing sync meeting."},
+        {"title": "MPC review", "day_offset": 4, "start": "10:00", "end": "11:00", "description": "Review session."}
+      ]
+    },
+    {
+      "id": "flagship",
+      "title": "Flagship multi-tool - summarize AND schedule",
+      "shows": "The full agentic loop: read + summarize emails, then create calendar events for the meeting requests.",
+      "prompts": ["Summarize today's emails and schedule my meetings."],
+      "expect": "Summarizes the inbox, then creates events for Anna's Tuesday 14:00 sync and Max's lunch tomorrow 12:30.",
+      "emails": [
+        {"from": "Anna Mayer <anna.mayer@edu-klu.example>", "subject": "Project sync on Tuesday?", "age_hours": 2, "unread": true,
+         "body": "Hi,\n\ncould we meet for a project sync on Tuesday at 14:00? Room S.2.42 or online.\n\nBest,\nAnna"},
+        {"from": "Max Berger <max.berger@gmx-mail.example>", "subject": "Lunch tomorrow?", "age_hours": 4, "unread": true,
+         "body": "Hey! Lunch tomorrow at 12:30 at the Mensa? Let me know.\n\nMax"},
+        {"from": "Prof. Steiner <steiner@edu-klu.example>", "subject": "Report deadline: Friday 15:00", "age_hours": 3, "unread": true,
+         "body": "Reminder: the intermediate report is due this Friday at 15:00 sharp."},
+        {"from": "Cloud Weekly <newsletter@cloudweekly.example>", "subject": "Cloud Weekly #218", "age_hours": 5, "unread": false,
+         "body": "This week: serverless GPU inference and edge benchmarks."}
+      ],
+      "events": []
+    },
+    {
+      "id": "memory",
+      "title": "Conversational memory - reschedule 'that meeting'",
+      "shows": "F6 multi-turn memory: the second prompt refers to 'that meeting' from the first turn. Send both with the SAME sessionId.",
+      "prompts": [
+        "Schedule the project sync Anna suggested for Tuesday at 14:00.",
+        "Actually, move that meeting to 15:00."
+      ],
+      "expect": "Turn 1 creates a Tuesday 14:00 event; turn 2 identifies it from the conversation and reschedules it to 15:00.",
+      "emails": [
+        {"from": "Anna Mayer <anna.mayer@edu-klu.example>", "subject": "Project sync on Tuesday?", "age_hours": 2, "unread": true,
+         "body": "Hi,\n\ncould we meet for a project sync on Tuesday at 14:00?\n\nBest,\nAnna"}
+      ],
+      "events": []
+    }
+  ]
+}

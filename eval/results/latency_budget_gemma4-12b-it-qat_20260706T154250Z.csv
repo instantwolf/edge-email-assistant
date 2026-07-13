@@ -1,0 +1,7 @@
+phase,turn,step,prefill_tok,prefill_s,prefill_tok_s,gen_tok,gen_s,gen_tok_s,load_s,total_s
+budget-ctx8192,1,read_emails call,839,4.219,199,153,10.522,14.5,0.42,15.52
+budget-ctx8192,2,list_events call,1439,5.78,249,63,4.583,13.7,0.32,10.85
+budget-ctx8192,3,final answer,1676,1.512,1109,362,28.591,12.7,0.33,30.47
+budget-ctx4096,1,read_emails call,839,4.186,200,182,12.445,14.6,2.72,19.36
+budget-ctx4096,2,list_events call,1439,5.703,252,63,4.549,13.9,0.29,10.56
+budget-ctx4096,3,final answer,1676,1.505,1114,330,25.805,12.8,0.28,27.6

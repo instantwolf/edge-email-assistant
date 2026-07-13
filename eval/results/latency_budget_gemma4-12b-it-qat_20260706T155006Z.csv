@@ -1,0 +1,4 @@
+phase,turn,step,prefill_tok,prefill_s,prefill_tok_s,gen_tok,gen_s,gen_tok_s,load_s,total_s
+budget-ctx8192-np256,1,read_emails call,839,4.219,199,251,17.276,14.5,0.3,21.99
+budget-ctx8192-np256,2,list_events call,1439,5.753,250,63,4.57,13.8,0.3,10.65
+budget-ctx8192-np256,3,final answer,1676,1.517,1105,256,19.919,12.9,0.31,21.77

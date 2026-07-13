@@ -1,0 +1,11 @@
+.env
+n8n_data_backup.tgz
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# presentation QA artifacts
+presentation/*.pdf
+presentation/slide-*.jpg

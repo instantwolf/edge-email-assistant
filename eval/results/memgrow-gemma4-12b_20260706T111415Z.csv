@@ -1,0 +1,25 @@
+turn,kind,latency_s,http,history_rows,table_bytes,response
+1,fact,34.72,200,2,65536,OK 1
+2,fact,11.09,200,4,65536,OK 2
+3,fact,10.42,200,6,65536,OK 3
+4,fact,7.78,200,8,65536,OK 4
+5,fact,7.5,200,10,65536,OK 5
+6,fact,6.12,200,12,65536,OK 6
+7,fact,7.96,200,14,65536,OK 7
+8,probe,32.61,200,16,65536,You haven't provided item 1 in our conversation yet.
+9,fact,14.62,200,18,65536,OK 8
+10,fact,12.64,200,20,65536,OK 9
+11,fact,10.41,200,22,65536,OK 10
+12,fact,7.47,200,24,73728,OK 11
+13,fact,13.74,200,26,73728,OK 12
+14,fact,6.72,200,28,73728,OK 13
+15,fact,7.6,200,30,73728,OK 14
+16,probe,28.56,200,32,73728,Item 1 was not mentioned in our conversation.
+17,fact,26.66,200,34,73728,OK 15
+18,fact,7.65,200,36,73728,OK 16
+19,fact,11.21,200,38,73728,OK 17
+20,fact,6.46,200,40,73728,OK 18
+21,fact,6.9,200,42,73728,OK 19
+22,fact,7.52,200,44,73728,OK 20
+23,fact,7.01,200,46,73728,OK 21
+24,probe-final,33.18,200,48,73728,"You asked me to remember 5 items (items 17, 18, 19, 20, and 21). Item 1 was not mentioned in our conversation."

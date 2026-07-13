@@ -1,0 +1,13 @@
+id,category,sessionId,latency_s,http_status,ok,response_chars
+1,simple,eval-a,15.36,200,True,983
+2,simple,eval-b,7.79,200,True,180
+3,datetime,eval-c,1.13,200,True,28
+4,single-tool,eval-d,11.12,200,True,508
+5,single-tool,eval-e,10.4,200,True,520
+6,single-tool,eval-f,8.7,200,True,345
+7,multi-tool,eval-mem,13.32,200,True,595
+8,task-extract,eval-g,16.57,200,True,39
+9,memory,eval-mem,4.73,200,True,136
+10,memory-action,eval-mem,2.55,200,True,36
+11,create-event,eval-h,4.12,200,True,97
+12,single-tool,eval-i,11.58,200,True,474

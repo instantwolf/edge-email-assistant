@@ -1,0 +1,14 @@
+[
+  {"id": 1,  "category": "simple",        "sessionId": "eval-a", "message": "What can you help me with? Answer in two sentences."},
+  {"id": 2,  "category": "simple",        "sessionId": "eval-b", "message": "Hello! Who are you?"},
+  {"id": 3,  "category": "datetime",      "sessionId": "eval-c", "message": "What day of the week is it today?"},
+  {"id": 4,  "category": "single-tool",   "sessionId": "eval-d", "message": "Summarize today's emails."},
+  {"id": 5,  "category": "single-tool",   "sessionId": "eval-e", "message": "Do I have unread emails? List sender and subject for each."},
+  {"id": 6,  "category": "single-tool",   "sessionId": "eval-f", "message": "What is on my calendar for the next 7 days?"},
+  {"id": 7,  "category": "multi-tool",    "sessionId": "eval-mem", "message": "Summarize today's emails and schedule my meetings."},
+  {"id": 8,  "category": "task-extract",  "sessionId": "eval-g", "message": "Find deadlines in my recent emails and save each one as a task."},
+  {"id": 9,  "category": "memory",        "sessionId": "eval-mem", "message": "Which meetings did you just schedule for me? Answer from our conversation."},
+  {"id": 10, "category": "memory-action", "sessionId": "eval-mem", "message": "Reply to Anna's email about the project sync and tell her Tuesday at 14:00 works for me."},
+  {"id": 11, "category": "create-event",  "sessionId": "eval-h", "message": "Schedule a meeting titled '[IOT26-TEST] Eval sync' on Friday from 10:00 to 10:30."},
+  {"id": 12, "category": "single-tool",   "sessionId": "eval-i", "message": "What open tasks do I have? List them."}
+]

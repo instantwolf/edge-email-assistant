@@ -1,0 +1,186 @@
+{
+  "id": "McpToolsServer01",
+  "name": "MCP Tools Server (calendar + tasks)",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "nodes": [
+    {
+      "id": "mcp-trigger-0001",
+      "name": "MCP Server Trigger",
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2,
+      "position": [
+        400,
+        0
+      ],
+      "webhookId": "iot26-mcp-tools-hook",
+      "parameters": {
+        "path": "iot26-tools",
+        "authentication": "none"
+      }
+    },
+    {
+      "id": "tool-cal-list-01",
+      "name": "list_events",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        200,
+        220
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_ACCOUNT_EMAIL }}",
+          "mode": "id"
+        },
+        "limit": 20,
+        "timeMin": "={{ $fromAI('start', 'start of the time range, ISO datetime', 'string') }}",
+        "timeMax": "={{ $fromAI('end', 'end of the time range, ISO datetime', 'string') }}",
+        "options": {},
+        "descriptionType": "manual",
+        "toolDescription": "List calendar events between start and end (ISO datetimes). Use to answer agenda questions and check availability."
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "GCalOAuth0000001",
+          "name": "Google Calendar (test account)"
+        }
+      }
+    },
+    {
+      "id": "tool-cal-create1",
+      "name": "create_event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        400,
+        220
+      ],
+      "parameters": {
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_ACCOUNT_EMAIL }}",
+          "mode": "id"
+        },
+        "start": "={{ $fromAI('start', 'event start, ISO datetime e.g. 2026-07-06T15:00:00', 'string') }}",
+        "end": "={{ $fromAI('end', 'event end, ISO datetime', 'string') }}",
+        "additionalFields": {
+          "summary": "={{ $fromAI('title', 'event title', 'string') }}",
+          "description": "={{ $fromAI('description', 'optional event details', 'string') }}"
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Create a calendar event with title, start and end (ISO datetimes)."
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "GCalOAuth0000001",
+          "name": "Google Calendar (test account)"
+        }
+      }
+    },
+    {
+      "id": "tool-task-create",
+      "name": "create_task",
+      "type": "n8n-nodes-base.googleTasksTool",
+      "typeVersion": 1,
+      "position": [
+        600,
+        220
+      ],
+      "parameters": {
+        "operation": "create",
+        "task": "@default",
+        "title": "={{ $fromAI('title', 'task title; include the due TIME in the title because Google Tasks stores only the date', 'string') }}",
+        "additionalFields": {
+          "notes": "={{ $fromAI('notes', 'details or source of the task, e.g. which email it came from', 'string') }}",
+          "dueDate": "={{ $fromAI('due_date', 'due date in format YYYY-MM-DD', 'string') ? $fromAI('due_date', 'due date in format YYYY-MM-DD', 'string') + 'T00:00:00.000Z' : '' }}"
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Save a task/deadline to Google Tasks with title, optional notes and due date."
+      },
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": "GTasksOAuth00001",
+          "name": "Google Tasks (test account)"
+        }
+      }
+    },
+    {
+      "id": "tool-task-list-1",
+      "name": "list_tasks",
+      "type": "n8n-nodes-base.googleTasksTool",
+      "typeVersion": 1,
+      "position": [
+        800,
+        220
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "task": "@default",
+        "returnAll": false,
+        "limit": 20,
+        "additionalFields": {},
+        "descriptionType": "manual",
+        "toolDescription": "List open tasks from Google Tasks."
+      },
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": "GTasksOAuth00001",
+          "name": "Google Tasks (test account)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "list_events": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_task": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_tasks": {
+      "ai_tool": [
+        [
+          {
+            "node": "MCP Server Trigger",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}

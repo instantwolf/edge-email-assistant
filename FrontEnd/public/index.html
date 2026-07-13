@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Assistant Console</title>
+  <link rel="stylesheet" href="/app.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📬</text></svg>" />
+</head>
+<body>
+  <div id="app">
+    <!-- Navigation rail -->
+    <nav class="rail">
+      <div class="rail-brand" title="Email &amp; Calendar Assistant">📬</div>
+      <a class="rail-item" data-route="chat" href="#chat"><span class="ic">💬</span><span>Chat</span></a>
+      <a class="rail-item" data-route="workspace" href="#workspace"><span class="ic">🗂</span><span>Workspace</span></a>
+      <a class="rail-item" data-route="eval" href="#eval"><span class="ic">📊</span><span>Eval</span></a>
+      <a class="rail-item" data-route="metrics" href="#metrics"><span class="ic">📈</span><span>Metrics</span></a>
+      <a class="rail-item" data-route="status" href="#status"><span class="ic">🩺</span><span>Status</span></a>
+      <div class="rail-spacer"></div>
+      <button id="theme-toggle" class="rail-item ghost" title="Toggle theme"><span class="ic">🌓</span></button>
+    </nav>
+
+    <!-- Main column -->
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <div id="health-dots" class="health-dots">
+            <span class="dot" data-svc="n8n" title="n8n">n8n</span>
+            <span class="dot" data-svc="ollama" title="Ollama">ollama</span>
+            <span class="dot" data-svc="postgres" title="Postgres">pg</span>
+          </div>
+          <span id="model-badge" class="badge subtle">model —</span>
+        </div>
+        <div class="topbar-right">
+          <span id="target-badge" class="badge subtle" title="n8n backend URL">edge</span>
+          <button id="refresh-health" class="btn-icon" title="Refresh health">⟳</button>
+        </div>
+      </header>
+
+      <main id="view" class="view"><!-- routed content --></main>
+    </div>
+  </div>
+
+  <script type="module" src="/js/main.js"></script>
+</body>
+</html>

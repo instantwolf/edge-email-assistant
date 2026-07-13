@@ -1,0 +1,479 @@
+{
+  "id": "EmailCalAssist01",
+  "name": "Email & Calendar Assistant",
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "nodes": [
+    {
+      "id": "wh-trigger-00001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "a7e0c1b2-assistant-hook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "assistant",
+        "responseMode": "responseNode",
+        "options": {}
+      }
+    },
+    {
+      "id": "agent-000000001",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [
+        280,
+        0
+      ],
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.message }}",
+        "options": {
+          "systemMessage": "=You are an Email and Calendar Assistant managing the user's Google account (Gmail, Google Calendar, Google Tasks).\n\nCurrent date/time: {{ $now.setZone('Europe/Vienna').toFormat('cccc, yyyy-MM-dd HH:mm') }} (Europe/Vienna). Use this for all date reasoning (today, tomorrow, weekdays, deadlines).\n\nRules:\n- Use tools to get real data. NEVER invent emails, events, or tasks. If a tool fails or returns nothing, say so plainly.\n- When summarizing emails: one line per email \u2014 sender, subject, gist.\n- When creating tasks: Google Tasks stores only the DATE of a deadline, so include the time in the task title, e.g. 'Submit report (due 15:00)'.\n- Before sending an email or creating/changing a calendar event, state in one sentence what you are doing.\n- Keep answers short: at most 8 lines, no filler."
+        }
+      }
+    },
+    {
+      "id": "llm-ollama-00001",
+      "name": "Ollama Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOllama",
+      "typeVersion": 1,
+      "position": [
+        120,
+        220
+      ],
+      "parameters": {
+        "model": "={{ $('Webhook').first().json.body.model || 'gemma4:12b-it-qat' }}",
+        "options": {
+          "keepAlive": "1h",
+          "numCtx": "={{ Number($('Webhook').first().json.body.numCtx) || 8192 }}",
+          "numPredict": "={{ Number($('Webhook').first().json.body.numPredict) || -1 }}",
+          "temperature": 0.2
+        }
+      },
+      "credentials": {
+        "ollamaApi": {
+          "id": "OllamaLocal00001",
+          "name": "Ollama local"
+        }
+      }
+    },
+    {
+      "id": "mem-postgres-001",
+      "name": "Postgres Chat Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        280,
+        220
+      ],
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Webhook').first().json.body.sessionId || 'default' }}"
+      },
+      "credentials": {
+        "postgres": {
+          "id": "PgMemory00000001",
+          "name": "Postgres memory"
+        }
+      }
+    },
+    {
+      "id": "tool-datetime-01",
+      "name": "current_datetime",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.1,
+      "position": [
+        440,
+        220
+      ],
+      "parameters": {
+        "name": "current_datetime",
+        "description": "Returns the precise current date and time (Europe/Vienna). The current date is already provided in your context - only call this if you need the exact minute.",
+        "language": "javaScript",
+        "jsCode": "const now = new Date();\nreturn now.toISOString() + ' (' + now.toLocaleString('en-AT', { weekday: 'long', timeZone: 'Europe/Vienna' }) + ', Europe/Vienna)';"
+      }
+    },
+    {
+      "id": "tool-gmail-read1",
+      "name": "read_emails",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        600,
+        220
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "limit": 10,
+        "simple": true,
+        "filters": {
+          "q": "={{ $fromAI('search_query', 'Gmail search query, e.g. newer_than:1d for the last day, is:unread for unread, from:alice@x.com. Empty string returns the most recent emails.', 'string') }}"
+        },
+        "options": {},
+        "descriptionType": "manual",
+        "toolDescription": "Read emails from the Gmail inbox. Optionally filter with search_query (Gmail search syntax)."
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GmailOAuth000001",
+          "name": "Gmail (test account)"
+        }
+      }
+    },
+    {
+      "id": "tool-gmail-send1",
+      "name": "send_email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.1,
+      "position": [
+        760,
+        220
+      ],
+      "parameters": {
+        "sendTo": "={{ $fromAI('to', 'recipient email address', 'string') }}",
+        "subject": "={{ $fromAI('subject', 'email subject line', 'string') }}",
+        "message": "={{ $fromAI('body', 'plain-text email body', 'string') }}",
+        "emailType": "text",
+        "options": {
+          "appendAttribution": false
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Send an email via Gmail. Provide to, subject, and body."
+      },
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "GmailOAuth000001",
+          "name": "Gmail (test account)"
+        }
+      }
+    },
+    {
+      "id": "tool-cal-list-01",
+      "name": "list_events",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        920,
+        220
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_ACCOUNT_EMAIL }}",
+          "mode": "id"
+        },
+        "limit": 20,
+        "timeMin": "={{ $fromAI('start', 'start of the time range, ISO datetime', 'string') }}",
+        "timeMax": "={{ $fromAI('end', 'end of the time range, ISO datetime', 'string') }}",
+        "options": {},
+        "descriptionType": "manual",
+        "toolDescription": "List calendar events between start and end (ISO datetimes). Use to answer agenda questions and check availability."
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "GCalOAuth0000001",
+          "name": "Google Calendar (test account)"
+        }
+      }
+    },
+    {
+      "id": "tool-cal-create1",
+      "name": "create_event",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        1080,
+        220
+      ],
+      "parameters": {
+        "operation": "create",
+        "calendar": {
+          "__rl": true,
+          "value": "={{ $env.GOOGLE_ACCOUNT_EMAIL }}",
+          "mode": "id"
+        },
+        "start": "={{ $fromAI('start', 'event start, ISO datetime e.g. 2026-07-06T15:00:00', 'string') }}",
+        "end": "={{ $fromAI('end', 'event end, ISO datetime', 'string') }}",
+        "additionalFields": {
+          "summary": "={{ $fromAI('title', 'event title', 'string') }}",
+          "description": "={{ $fromAI('description', 'optional event details', 'string') }}"
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Create a calendar event with title, start and end (ISO datetimes)."
+      },
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "GCalOAuth0000001",
+          "name": "Google Calendar (test account)"
+        }
+      }
+    },
+    {
+      "id": "tool-task-create",
+      "name": "create_task",
+      "type": "n8n-nodes-base.googleTasksTool",
+      "typeVersion": 1,
+      "position": [
+        1240,
+        220
+      ],
+      "parameters": {
+        "operation": "create",
+        "task": "@default",
+        "title": "={{ $fromAI('title', 'task title; include the due TIME in the title because Google Tasks stores only the date', 'string') }}",
+        "additionalFields": {
+          "notes": "={{ $fromAI('notes', 'details or source of the task, e.g. which email it came from', 'string') }}",
+          "dueDate": "={{ $fromAI('due_date', 'due date in format YYYY-MM-DD', 'string') ? $fromAI('due_date', 'due date in format YYYY-MM-DD', 'string') + 'T00:00:00.000Z' : '' }}"
+        },
+        "descriptionType": "manual",
+        "toolDescription": "Save a task/deadline to Google Tasks with title, optional notes and due date."
+      },
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": "GTasksOAuth00001",
+          "name": "Google Tasks (test account)"
+        }
+      }
+    },
+    {
+      "id": "tool-task-list-1",
+      "name": "list_tasks",
+      "type": "n8n-nodes-base.googleTasksTool",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        220
+      ],
+      "parameters": {
+        "operation": "getAll",
+        "task": "@default",
+        "returnAll": false,
+        "limit": 20,
+        "additionalFields": {},
+        "descriptionType": "manual",
+        "toolDescription": "List open tasks from Google Tasks."
+      },
+      "credentials": {
+        "googleTasksOAuth2Api": {
+          "id": "GTasksOAuth00001",
+          "name": "Google Tasks (test account)"
+        }
+      }
+    },
+    {
+      "id": "if-validate-0001",
+      "name": "Validate Input",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        140,
+        0
+      ],
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $json.body.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "respond-ok-00001",
+      "name": "Respond OK",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        0
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"output\": $json.output, \"executionId\": $execution.id, \"sessionId\": $('Webhook').first().json.body.sessionId || 'default' } }}",
+        "options": {}
+      }
+    },
+    {
+      "id": "respond-bad-0001",
+      "name": "Respond 400",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        280,
+        160
+      ],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"error\": \"body must contain a non-empty 'message' (and optionally 'sessionId')\" } }}",
+        "options": {
+          "responseCode": 400
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "current_datetime": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "read_emails": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "send_email": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_events": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_event": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "create_task": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "list_tasks": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Input": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond 400",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  }
+}
