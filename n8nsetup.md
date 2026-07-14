@@ -45,10 +45,17 @@ n8n editor: http://localhost:5678 — log in with `N8N_OWNER_EMAIL` / `N8N_OWNER
    docker compose exec n8n n8n update:workflow --id=EmailCalAssist01 --active=true
    docker compose restart n8n
    ```
-3. **Connect Google** (manual, ~2 min — a real browser consent is required once):
-   n8n → Overview → Credentials → open each of the 3 Google entries → (paste Client ID/Secret
-   if not pre-filled from `.env`) → **Sign in with Google** → "unverified app" warning →
-   Advanced → continue → allow all.
+3. **Connect Google** (manual, ~2 min — a real browser consent is required):
+   n8n → Overview → Credentials → open **each of the 3 Google entries**
+   (`Gmail (test account)`, `Google Calendar (test account)`, `Google Tasks (test account)`) →
+   (paste Client ID/Secret if not pre-filled from `.env`) → **Sign in with Google** →
+   "unverified app" warning → Advanced → continue → allow all → **Save**.
+
+   > ⚠️ This is **not** a one-time step. While the OAuth consent screen is in **Testing**
+   > mode, Google refresh tokens **expire after 7 days** — after which every ground-truth
+   > widget fails with `HTTP Error 400: Bad Request — re-authorize Google in n8n`. Redo
+   > this same step to re-authorize (see [Recurring chore](#recurring-chore) for the
+   > permanent fix). Do it right before any eval run or demo.
 4. **Test:**
    ```bash
    curl -X POST http://localhost:5678/webhook/assistant -H 'Content-Type: application/json' \
@@ -70,4 +77,15 @@ docker run --rm -v iotprojectmpc_n8n_data:/data -v "$PWD":/backup alpine \
 
 ### Recurring chore
 OAuth consent screen is in **Testing** mode → Google refresh tokens **expire every 7 days**.
-Redo the three "Sign in with Google" clicks weekly, and always right before eval runs or the demo.
+Symptom once expired: the frontend ground-truth widgets all fail with
+`token refresh failed for GmailOAuth000001: HTTP Error 400: Bad Request — re-authorize Google in n8n`.
+
+**Re-authorize (weekly, and always right before eval runs or the demo):**
+n8n → Overview → **Credentials** → open **each of the 3 Google entries** → **Sign in with
+Google** → Advanced → continue → allow all → **Save**. Then reload the frontend (no restart
+needed — it reads the refreshed token from n8n).
+
+**Permanent fix (recommended):** publish the OAuth app so tokens stop expiring —
+Google Cloud Console → APIs & Services → **OAuth consent screen** → **Publish app**
+("In production"). For your own account this removes the 7-day expiry; you'll just bypass an
+"unverified app" warning on the next consent.
