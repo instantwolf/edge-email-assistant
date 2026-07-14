@@ -21,6 +21,14 @@ metrics into browsable charts.
 ./FrontEnd/run.sh                 # then open http://localhost:8080
 ```
 
+**Windows:** `.sh` isn't executable in PowerShell. Run the server directly, or use
+the bundled PowerShell port `FrontEnd\run.ps1` (`-Live` for live Google data):
+
+```powershell
+$env:ENABLE_TRUTH=1; python -X utf8 FrontEnd\server.py   # direct (drop the env var to keep live data off)
+.\FrontEnd\run.ps1 -Live                                 # or the .ps1 wrapper
+```
+
 ### Enabling live Google data (Workspace + chat drawer)
 
 Off by default. Turn it on any of three ways — pick per taste:
