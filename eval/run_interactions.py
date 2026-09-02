@@ -37,15 +37,26 @@ def call(base_url, session_id, message, timeout, path="assistant",
         f"{base_url}/webhook/{path}", data=payload,
         headers={"Content-Type": "application/json"},
     )
+    # Absolute wall-clock bounds, not just a duration: the effect axis
+    # attributes created objects to an interaction by their own creation
+    # stamps, and that needs a window (study-v3 phase2-harness effects.attribute).
+    started = datetime.now(timezone.utc)
     t0 = time.monotonic()
+
+    def done(status, output, error):
+        return {"latency_s": time.monotonic() - t0, "http_status": status,
+                "output": output, "error": error,
+                "started_at": started.isoformat(),
+                "ended_at": datetime.now(timezone.utc).isoformat()}
+
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             body = json.loads(resp.read() or b"{}")
-            return time.monotonic() - t0, resp.status, body.get("output", ""), None
+            return done(resp.status, body.get("output", ""), None)
     except urllib.error.HTTPError as e:
-        return time.monotonic() - t0, e.code, "", e.read().decode(errors="replace")[:500]
+        return done(e.code, "", e.read().decode(errors="replace")[:500])
     except Exception as e:  # timeouts, connection errors
-        return time.monotonic() - t0, 0, "", repr(e)
+        return done(0, "", repr(e))
 
 
 def main():
@@ -55,7 +66,10 @@ def main():
     ap.add_argument("--file", default=str(Path(__file__).parent / "interactions.json"))
     ap.add_argument("--limit", type=int, default=0, help="run only the first N interactions")
     ap.add_argument("--path", default="assistant", help="webhook path (e.g. assistant-mcp)")
-    ap.add_argument("--timeout", type=int, default=300)
+    ap.add_argument("--timeout", type=int, default=600,
+                    help="per-request timeout. 600 s for the campaign: 300 "
+                         "censors asymmetrically by host and no analysis "
+                         "recovers a killed trial (study-v3 DESIGN.md §12)")
     ap.add_argument("--model", default=None,
                     help="per-request Ollama model override (body.model)")
     ap.add_argument("--num-ctx", type=int, default=None, dest="num_ctx",
@@ -73,21 +87,27 @@ def main():
     csv_path = RESULTS_DIR / f"{args.tag}_{stamp}.csv"
     jsonl_path = RESULTS_DIR / f"{args.tag}_{stamp}.jsonl"
 
-    rows = []
+    rows, windows = [], []
     with jsonl_path.open("w") as jf:
         for it in interactions:
             print(f"[{it['id']:>2}] {it['category']:<13} -> ", end="", flush=True)
-            latency, status, output, error = call(
+            r = call(
                 args.base_url, it["sessionId"], it["message"], args.timeout, args.path,
                 model=args.model, num_ctx=args.num_ctx, num_predict=args.num_predict)
+            latency, status, output, error = (r["latency_s"], r["http_status"],
+                                              r["output"], r["error"])
             ok = status == 200 and not error
             print(f"{latency:6.1f}s  http={status}  {'ok' if ok else 'FAIL'}")
             row = {
                 "id": it["id"], "category": it["category"], "sessionId": it["sessionId"],
                 "latency_s": round(latency, 2), "http_status": status, "ok": ok,
                 "response_chars": len(output),
+                "started_at": r["started_at"], "ended_at": r["ended_at"],
             }
             rows.append(row)
+            windows.append({"id": it["id"], "sessionId": it["sessionId"],
+                            "started_at": r["started_at"],
+                            "ended_at": r["ended_at"]})
             jf.write(json.dumps({**row, "message": it["message"],
                                  "model": args.model, "num_ctx": args.num_ctx,
                                  "num_predict": args.num_predict,
@@ -98,10 +118,14 @@ def main():
         w.writeheader()
         w.writerows(rows)
 
+    # Interaction windows drive effect-axis attribution (study-v3 task 2.3).
+    windows_path = RESULTS_DIR / f"{args.tag}_{stamp}_windows.json"
+    windows_path.write_text(json.dumps(windows, indent=1))
+
     n_ok = sum(r["ok"] for r in rows)
     lat = sorted(r["latency_s"] for r in rows)
     print(f"\n{n_ok}/{len(rows)} ok | latency min {lat[0]}s / median {lat[len(lat)//2]}s / max {lat[-1]}s")
-    print(f"results: {csv_path}\n         {jsonl_path}")
+    print(f"results: {csv_path}\n         {jsonl_path}\n         {windows_path}")
 
 
 if __name__ == "__main__":

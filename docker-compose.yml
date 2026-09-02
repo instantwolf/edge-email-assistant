@@ -12,6 +12,17 @@ services:
       - TZ=${TZ:-Europe/Vienna}
       - WEBHOOK_URL=${N8N_PUBLIC_URL:-http://localhost:5678}
       - N8N_DIAGNOSTICS_ENABLED=false
+      # study-v3 task 2.4 — the observation axis is read from per-node
+      # execution data, and n8n prunes it on boot by default (336 h max age).
+      # The campaign restarts n8n between models, so the default would delete
+      # traces mid-campaign. Retention off, save everything, including data
+      # for runs still in progress (a 600 s timeout kill leaves a `running`
+      # tool node, which is data: an attempt without a response).
+      - EXECUTIONS_DATA_PRUNE=false
+      - EXECUTIONS_DATA_SAVE_ON_SUCCESS=all
+      - EXECUTIONS_DATA_SAVE_ON_ERROR=all
+      - EXECUTIONS_DATA_SAVE_ON_PROGRESS=true
+      - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
       # Test Google account the workflow's calendar nodes target (see .env.example).
       - GOOGLE_ACCOUNT_EMAIL=${GOOGLE_ACCOUNT_EMAIL}
     volumes:
