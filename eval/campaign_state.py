@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Campaign state capture — the effect axis's raw input (study-v3 task 2.4).
 
-    python3 eval/campaign_state.py pre  <tag>
-    python3 eval/campaign_state.py post <tag>
+    python3 eval/campaign_state.py pre   <tag>
+    python3 eval/campaign_state.py post  <tag>
+    python3 eval/campaign_state.py clean <tag>
 
 Successor to `eval_state.py`, which was written for the pilot and captures too
 little for the campaign: events without `end` or `description`, sent mail
@@ -33,9 +34,23 @@ Per-interaction attribution happens study-side (`effects.attribute()`) against
 the interaction windows `run_interactions.py` writes, so the choice between
 "snapshot around every interaction" and "snapshot once and window by the
 object's own creation stamp" stays a scheduling decision, not a data format.
+
+**`clean <tag>`** (added 2026-09-10) deletes exactly those objects again, by
+id. The account-level reset (`seed/cleanup.py`) matches on the title prefix
+`[IOT26`/`[ST3]`, so an object whose title never carried the prefix is
+invisible to it: in the 2.6 tracer run a model created the task `Submit
+intermediate report (due 2026-09-17 15:00)`, which outlived the reset and would
+have sat in the account for the remaining campaign runs, in every later run's
+reads. The capture is the precise reset, because it names what this run
+created and nothing else. Idempotent — a 404/410 is an object already gone,
+which is counted and reported rather than failed — so it can be re-run for any
+tag whose capture is still on disk. It exits 1 on a token failure or on an
+object it could not remove, having attempted every one; the tag-based reset
+stays as the safety net either way.
 """
 import json
 import sys
+import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import datetime, timezone
@@ -57,10 +72,18 @@ WINDOW = {"timeMin": "2026-08-01T00:00:00Z", "timeMax": "2027-03-01T00:00:00Z",
 
 MARKER = {"_capture": "full"}
 
+# An object `clean` was asked to remove and the API says is not there. Being
+# already gone is the goal state, not a fault: the step is re-runnable, and the
+# operator may have removed something by hand between the run and the clean.
+GONE = (404, 410)
 
-def api(token, url):
-    req = urllib.request.Request(url)
+
+def api(token, url, payload=None, method=None):
+    data = json.dumps(payload).encode() if payload is not None else None
+    req = urllib.request.Request(url, data=data, method=method)
     req.add_header("Authorization", f"Bearer {token}")
+    if data:
+        req.add_header("Content-Type", "application/json")
     with urlopen(req) as r:
         body = r.read()
         return json.loads(body) if body else {}
@@ -95,11 +118,83 @@ def tokens():
             get_token("GmailOAuth000001"))
 
 
+def remove(token, url, payload=None, method=None):
+    """One removal. True if the object was there, False if it was already
+    gone. Anything other than a 404/410 is the caller's problem."""
+    try:
+        api(token, url, payload, method)
+        return True
+    except urllib.error.HTTPError as ex:
+        if ex.code in GONE:
+            return False
+        raise
+
+
+def clean(tag):
+    """Remove the objects listed in `<tag>_created.json`, by id.
+
+    Calendar and Tasks are deleted; sent mail is trashed, for the same reason
+    `seed/cleanup.py` trashes — that is what the granted Gmail scope allows.
+
+    Every object is attempted even after one fails, because a step that exists
+    to leave nothing behind must not stop at the first thing it cannot remove.
+    """
+    path = RESULTS / f"{tag}_created.json"
+    try:
+        created = json.loads(path.read_text(encoding="utf-8"))["created"]
+    except (OSError, ValueError, KeyError) as ex:
+        print(f"clean [{tag}]: no capture to clean at {path}: {ex}",
+              file=sys.stderr)
+        return 1
+    try:
+        gc, gt, gm = tokens()
+    except (SystemExit, Exception) as ex:        # get_token raises SystemExit
+        print(f"clean [{tag}]: token failure: {ex}", file=sys.stderr)
+        return 1
+
+    plan = [
+        ("calendar_event", gc,
+         lambda i: (f"{GCAL}/calendars/primary/events/{i}", None, "DELETE")),
+        ("task", gt,
+         lambda i: (f"{GTASKS}/lists/@default/tasks/{i}", None, "DELETE")),
+        ("sent_email", gm,
+         lambda i: (f"{GMAIL}/messages/{i}/trash", {}, "POST")),
+    ]
+    removed = {kind: 0 for kind, _token, _build in plan}
+    already, failed = 0, []
+    for kind, token, build in plan:
+        for obj in created.get(kind) or []:
+            oid = obj.get("id")
+            if not oid:
+                failed.append(f"{kind}: a captured record carries no id")
+                continue
+            try:
+                if remove(token, *build(oid)):
+                    removed[kind] += 1
+                else:
+                    already += 1
+            except Exception as ex:                          # noqa: BLE001
+                failed.append(f"{kind} {oid}: {ex}")
+
+    print(f"clean [{tag}]: {removed['calendar_event']} events, "
+          f"{removed['task']} tasks, {removed['sent_email']} mails removed "
+          f"({already} already gone)")
+    for line in failed:
+        print(f"clean [{tag}]: FAILED {line}", file=sys.stderr)
+    return 1 if failed else 0
+
+
 def main():
     if len(sys.argv) < 3:
-        print(__doc__.strip().splitlines()[2], file=sys.stderr)
+        print("\n".join(__doc__.strip().splitlines()[2:5]), file=sys.stderr)
         return 2
     mode, tag = sys.argv[1], sys.argv[2]
+
+    # Ahead of the tokens: `clean` mints its own, so that a token failure there
+    # is one reported line rather than a traceback out of a non-critical step.
+    if mode == "clean":
+        return clean(tag)
+
     gc, gt, gm = tokens()
 
     if mode == "pre":

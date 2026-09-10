@@ -9,3 +9,8 @@ venv/
 # presentation QA artifacts
 presentation/*.pdf
 presentation/slide-*.jpg
+
+# Per-run artifacts (2026-09-10): exports are full copies of the n8n database, the
+# captures hold account objects, and .tmp holds pre-snapshots. Never commit them.
+eval/results/
+eval/.tmp/
