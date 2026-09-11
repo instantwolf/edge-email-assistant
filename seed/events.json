@@ -4,13 +4,5 @@
   {"title": "[IOT26] Project sync with Anna", "day_offset": 2, "start": "13:00", "end": "14:00",
    "description": "Seeded event: existing sync meeting."},
   {"title": "[IOT26] MPC review", "day_offset": 5, "start": "10:00", "end": "11:00",
-   "description": "Seeded event: review session."},
-  {"title": "[IOT26] Library slot", "day_offset": 0, "start": "16:00", "end": "18:00",
-   "description": "Seeded event: distractor, booked study room."},
-  {"title": "[IOT26] Lecture: Distributed Systems", "day_offset": 3, "start": "08:30", "end": "10:00",
-   "description": "Seeded event: distractor, regular lecture."},
-  {"title": "[IOT26] Dinner with flatmates", "day_offset": 4, "start": "19:00", "end": "21:00",
-   "description": "Seeded event: distractor, private appointment."},
-  {"title": "[IOT26] USI volleyball", "day_offset": 6, "start": "18:00", "end": "19:30",
-   "description": "Seeded event: distractor, sports course."}
+   "description": "Seeded event: review session."}
 ]
