@@ -25,6 +25,9 @@ services:
       - EXECUTIONS_DATA_SAVE_MANUAL_EXECUTIONS=true
       # Test Google account the workflow's calendar nodes target (see .env.example).
       - GOOGLE_ACCOUNT_EMAIL=${GOOGLE_ACCOUNT_EMAIL}
+      # n8n 2.x blocks $env in expressions by default; the calendar nodes read the
+      # calendar id from $env.GOOGLE_ACCOUNT_EMAIL (found 2026-09-11: "access to env vars denied").
+      - N8N_BLOCK_ENV_ACCESS_IN_NODE=false
     volumes:
       - n8n_data:/home/node/.n8n
     extra_hosts:

@@ -206,7 +206,7 @@
         "end": "={{ $fromAI('end', 'event end, ISO datetime', 'string') }}",
         "additionalFields": {
           "summary": "={{ $fromAI('title', 'event title', 'string') }}",
-          "description": "={{ $fromAI('description', 'optional event details', 'string') }}"
+          "description": "={{ $fromAI('description', 'optional event details', 'string', '') }}"
         },
         "descriptionType": "manual",
         "toolDescription": "Create a calendar event with title, start and end (ISO datetimes)."
@@ -232,7 +232,7 @@
         "task": "@default",
         "title": "={{ $fromAI('title', 'task title; include the due TIME in the title because Google Tasks stores only the date', 'string') }}",
         "additionalFields": {
-          "notes": "={{ $fromAI('notes', 'details or source of the task, e.g. which email it came from', 'string') }}",
+          "notes": "={{ $fromAI('notes', 'details or source of the task, e.g. which email it came from', 'string', '') }}",
           "dueDate": "={{ $fromAI('due_date', 'due date in format YYYY-MM-DD', 'string') ? $fromAI('due_date', 'due date in format YYYY-MM-DD', 'string') + 'T00:00:00.000Z' : '' }}"
         },
         "descriptionType": "manual",
