@@ -89,21 +89,46 @@ def api(token, url, payload=None, method=None):
         return json.loads(body) if body else {}
 
 
+def paged(token, url, key="items"):
+    """Follow `nextPageToken` to exhaustion.
+
+    None of these listings used to paginate, and on 2026-09-12 that silently
+    truncated a capture: the calendar returned 51 of 53 events with a
+    `nextPageToken` set, **while `maxResults` was 250**. Google paginates on its
+    own server-side sizing, not on the maximum you ask for, so a page token can
+    appear on any response and asking for more per page does not prevent it.
+
+    Two of the run's created events fell past that first page. They were
+    therefore missing from the pre/post diff, which meant `clean` could not
+    delete them (they outlived the run in the account) and — the damaging half —
+    the effect differ never saw them either, so genuine writes would have scored
+    `no-write`. The census could not catch it: it reconciles the capture against
+    itself, and an object the capture never saw is invisible to both sides of
+    that sum.
+    """
+    out, page = [], None
+    while True:
+        sep = "&" if "?" in url else "?"
+        resp = api(token, f"{url}{sep}pageToken={page}" if page else url)
+        out += resp.get(key, [])
+        page = resp.get("nextPageToken")
+        if not page:
+            return out
+
+
 def list_events(token):
     q = urllib.parse.urlencode(WINDOW)
-    return api(token, f"{GCAL}/calendars/primary/events?{q}").get("items", [])
+    return paged(token, f"{GCAL}/calendars/primary/events?{q}")
 
 
 def list_tasks(token):
-    return api(token, f"{GTASKS}/lists/@default/tasks"
-                      "?showCompleted=true&showHidden=true&maxResults=100"
-               ).get("items", [])
+    return paged(token, f"{GTASKS}/lists/@default/tasks"
+                        "?showCompleted=true&showHidden=true&maxResults=100")
 
 
 def list_sent(token):
     q = urllib.parse.quote("in:sent newer_than:2d")
-    return api(token, f"{GMAIL}/messages?q={q}&maxResults=200").get(
-        "messages", [])
+    return paged(token, f"{GMAIL}/messages?q={q}&maxResults=200", "messages")
 
 
 def fetch_message(token, mid):
